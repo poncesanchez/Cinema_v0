@@ -1,0 +1,124 @@
+name: CI/CD CineBook
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  build-and-test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build and test peliculas-service
+        working-directory: peliculas-service
+        run: mvn clean verify -B
+
+  build-and-test-frontend:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && 'prod' || 'qa') || (github.ref == 'refs/heads/main' && 'prod' || 'qa') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install and build frontend
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: |
+          npm install
+          npm run build -- --mode ${{ vars.VITE_BUILD_MODE }}
+
+  docker-build:
+    needs: [build-and-test-backend, build-and-test-frontend]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'qa' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker images
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_BUILD_MODE: ${{ vars.VITE_BUILD_MODE }}
+        run: |
+          docker build -t peliculas-service:latest ./peliculas-service
+          docker build \
+            --build-arg VITE_API_URL="$VITE_API_URL" \
+            --build-arg VITE_BUILD_MODE="$VITE_BUILD_MODE" \
+            -t cinebook-frontend:latest ./frontend
+
+  deploy-aws:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'qa' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag and push images to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY_PREFIX: cinebook
+          IMAGE_TAG: ${{ github.sha }}
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_BUILD_MODE: ${{ vars.VITE_BUILD_MODE }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX-peliculas-service:$IMAGE_TAG ./peliculas-service
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX-peliculas-service:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX-peliculas-service:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX-peliculas-service:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX-peliculas-service:latest
+
+          docker build \
+            --build-arg VITE_API_URL="$VITE_API_URL" \
+            --build-arg VITE_BUILD_MODE="$VITE_BUILD_MODE" \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX-frontend:$IMAGE_TAG ./frontend
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX-frontend:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX-frontend:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX-frontend:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX-frontend:latest
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SPRING_PROFILES_ACTIVE: ${{ vars.SPRING_PROFILES_ACTIVE }}
+          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+        with:
+          host: ${{ github.ref == 'refs/heads/main' && secrets.EC2_PROD_HOST || secrets.EC2_QA_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: SPRING_PROFILES_ACTIVE,SPRING_DATASOURCE_URL,SPRING_DATASOURCE_USERNAME,SPRING_DATASOURCE_PASSWORD
+          script: |
+            cd /opt/cinebook
+            docker compose pull
+            docker compose up -d
