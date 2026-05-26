@@ -1,6 +1,31 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8082';
+const DEFAULT_API_URL = 'http://localhost:8082';
+const DEFAULT_API_PORT = '8082';
+
+/** Asegura URL absoluta; sin protocolo axios la trata como path relativo al frontend. */
+function normalizeApiUrl(raw) {
+  const value = raw?.trim();
+  if (!value) return DEFAULT_API_URL;
+
+  let url = value.replace(/\/$/, '');
+  if (!/^https?:\/\//i.test(url)) {
+    url = `http://${url}`;
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (!parsed.port && (parsed.protocol === 'http:' || parsed.protocol === 'https:')) {
+      parsed.port = DEFAULT_API_PORT;
+    }
+    return parsed.origin;
+  } catch {
+    console.warn('[api] VITE_API_URL inválida, usando default:', raw);
+    return DEFAULT_API_URL;
+  }
+}
+
+const API_URL = normalizeApiUrl(import.meta.env.VITE_API_URL);
 
 const client = axios.create({
   baseURL: API_URL,
