@@ -9,7 +9,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cinebook} -d ${POSTGRES_DB:-cinebook}"]
       interval: 5s
@@ -28,7 +27,8 @@ services:
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/cinebook}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-cinebook}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-cinebook}
-      SPRING_PROFILES_ACTIVE: docker,${SPRING_PROFILES_ACTIVE:-qa}
+      # Perfil "docker" al final para que sus propiedades (p. ej. ddl-auto) prevalezcan sobre qa/prod
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-qa},docker
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
     depends_on:
       postgres:

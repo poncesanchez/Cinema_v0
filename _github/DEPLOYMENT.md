@@ -46,22 +46,9 @@ Requisitos:
 2. **AWS CLI** y rol IAM con permisos ECR pull sobre `cinebook-peliculas-service` y `cinebook-frontend`.
 3. Docker y Docker Compose v2.
 
-En cada deploy el workflow copia por SCP:
+En cada deploy el workflow copia por SCP `docker-compose.prod.yml` y luego ejecuta `docker compose -f docker-compose.prod.yml pull && up -d` con imágenes desde ECR.
 
-- `docker-compose.prod.yml`
-- `db/init.sql`
-
-y luego ejecuta `docker compose -f docker-compose.prod.yml pull && up -d` con imágenes desde ECR.
-
-**Nota:** `init.sql` solo se ejecuta la primera vez que se crea el volumen `postgres_data`. Si Postgres falló antes por falta del archivo, en la EC2 ejecuta una vez:
-
-```bash
-cd ~/cinebook
-docker compose -f docker-compose.prod.yml down
-docker volume rm cinebook_postgres_data
-```
-
-Luego vuelve a lanzar el workflow.
+**Perfiles Spring en EC2:** Compose usa `qa,docker` o `prod,docker` (el perfil `docker` va **al final**). Así `ddl-auto: update` del perfil docker crea la tabla `peliculas` aunque `prod` use `validate`. Las películas de demostración se insertan automáticamente al arrancar el backend si la tabla está vacía.
 
 ## Repositorios ECR
 

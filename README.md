@@ -91,7 +91,7 @@ Servicios disponibles:
 
 ### Desarrollo local (sin Docker)
 
-1. Levantar PostgreSQL en el puerto 5432 con la base `cinebook` (opcional: ejecutar `db/init.sql`).
+1. Levantar PostgreSQL en el puerto 5432 con la base `cinebook`.
 2. Backend:
 
 ```bash
@@ -130,7 +130,7 @@ El workflow `_github/workflows/deploy.yml` usa los entornos GitHub **`qa`** y **
 1. Build y tests de `peliculas-service` (Maven)
 2. Build del frontend con `vars.VITE_API_URL` y `vars.VITE_BUILD_MODE`
 3. Build de imágenes Docker
-4. Push a AWS ECR, copia `docker-compose.prod.yml` y `db/init.sql` a EC2, y deploy con Docker Compose
+4. Push a AWS ECR, copia `docker-compose.prod.yml` a EC2, y deploy con Docker Compose
 
 Configuración completa: [_github/DEPLOYMENT.md](_github/DEPLOYMENT.md).
 
@@ -146,7 +146,7 @@ DELETE /peliculas/{id}
 
 ## Datos de demostración
 
-Tras el primer arranque con `db/init.sql` se cargan dos películas de ejemplo (Dune: Parte Dos, Inside Out 2).
+Tras el primer arranque del backend se cargan automáticamente dos películas de ejemplo (Dune: Parte Dos, Inside Out 2) si la base está vacía.
 
 ## Estructura del repositorio
 
@@ -154,7 +154,6 @@ Tras el primer arranque con `db/init.sql` se cargan dos películas de ejemplo (D
 cinebook/
 ├── peliculas-service/   # Backend
 ├── frontend/            # UI React
-├── db/init.sql
 ├── docker-compose.yml          # desarrollo local (build)
 ├── docker-compose.prod.yml     # EC2 / ECR (solo pull)
 ├── _github/workflows/deploy.yml
