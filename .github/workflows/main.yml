@@ -121,5 +121,5 @@ jobs:
           envs: SPRING_PROFILES_ACTIVE,SPRING_DATASOURCE_URL,SPRING_DATASOURCE_USERNAME,SPRING_DATASOURCE_PASSWORD
           script: |
             cd /opt/cinebook
-            docker compose pull
-            docker compose up -d
+            docker-compose pull
+            docker-compose up -d
