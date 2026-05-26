@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cinebook}
+      POSTGRES_USER: ${POSTGRES_USER:-cinebook}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cinebook}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cinebook} -d ${POSTGRES_DB:-cinebook}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - cinebook-net
+
+  peliculas:
+    image: ${PELICULAS_IMAGE:-cinebook-peliculas-service:latest}
+    restart: unless-stopped
+    ports:
+      - "${PELICULAS_PORT:-8082}:8082"
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/cinebook}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-cinebook}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-cinebook}
+      SPRING_PROFILES_ACTIVE: docker,${SPRING_PROFILES_ACTIVE:-qa}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cinebook-net
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-cinebook-frontend:latest}
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - peliculas
+    networks:
+      - cinebook-net
+
+volumes:
+  postgres_data:
+
+networks:
+  cinebook-net:
+    driver: bridge

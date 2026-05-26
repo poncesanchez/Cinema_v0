@@ -155,7 +155,8 @@ cinebook/
 ├── peliculas-service/   # Backend
 ├── frontend/            # UI React
 ├── db/init.sql
-├── docker-compose.yml
+├── docker-compose.yml          # desarrollo local (build)
+├── docker-compose.prod.yml     # EC2 / ECR (solo pull)
 ├── .github/workflows/deploy.yml
 └── .github/DEPLOYMENT.md
 ```
