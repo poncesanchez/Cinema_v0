@@ -62,7 +62,7 @@ docker compose --env-file .env.prod up --build -d
 
 ### CI/CD (GitHub)
 
-Variables y secrets por entorno **`qa`** y **`prod`**: ver [.github/DEPLOYMENT.md](.github/DEPLOYMENT.md).
+Variables y secrets por entorno **`qa`** y **`prod`**: ver [_github/DEPLOYMENT.md](_github/DEPLOYMENT.md).
 
 | Rama | Entorno GitHub | Perfil típico |
 |------|----------------|---------------|
@@ -125,14 +125,14 @@ O usa el script:
 
 ## CI/CD (GitHub Actions)
 
-El workflow `.github/workflows/deploy.yml` usa los entornos GitHub **`qa`** y **`prod`** (sin URLs ni perfiles en duro en el YAML).
+El workflow `_github/workflows/deploy.yml` usa los entornos GitHub **`qa`** y **`prod`** (sin URLs ni perfiles en duro en el YAML).
 
 1. Build y tests de `peliculas-service` (Maven)
 2. Build del frontend con `vars.VITE_API_URL` y `vars.VITE_BUILD_MODE`
 3. Build de imágenes Docker
-4. Push a AWS ECR y deploy SSH a EC2 con variables del entorno
+4. Push a AWS ECR, copia `docker-compose.prod.yml` y `db/init.sql` a EC2, y deploy con Docker Compose
 
-Configuración completa: [.github/DEPLOYMENT.md](.github/DEPLOYMENT.md).
+Configuración completa: [_github/DEPLOYMENT.md](_github/DEPLOYMENT.md).
 
 ## Endpoints de la API
 
@@ -157,8 +157,8 @@ cinebook/
 ├── db/init.sql
 ├── docker-compose.yml          # desarrollo local (build)
 ├── docker-compose.prod.yml     # EC2 / ECR (solo pull)
-├── .github/workflows/deploy.yml
-└── .github/DEPLOYMENT.md
+├── _github/workflows/deploy.yml
+└── _github/DEPLOYMENT.md
 ```
 
 ## Licencia
