@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/cinebook
+    username: cinebook
+    password: cinebook
+    hikari:
+      connection-timeout: 60000
+      initialization-fail-timeout: 120000
+      maximum-pool-size: 5
