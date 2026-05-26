@@ -136,5 +136,5 @@ jobs:
             export PELICULAS_IMAGE="${ECR_REGISTRY}/cinebook-peliculas-service:latest"
             export FRONTEND_IMAGE="${ECR_REGISTRY}/cinebook-frontend:latest"
             aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d
